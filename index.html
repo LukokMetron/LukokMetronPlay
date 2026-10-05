@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LukokMetron Player</title>
+    <style>
+        :root {
+            --primary: #1db954;
+            --primary-hover: #1ed760;
+            --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 50%, #06040a 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-hover: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-sub: #a7a7a7;
+            --accent-star: #ffd700;
+            --danger: #ff4757;
+            --danger-hover: #ff6b81;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 15px;
+            padding-top: 280px;
+            padding-bottom: 20px;
+        }
+
+        .top-fixed-panel {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 680px;
+            background: rgba(18, 14, 34, 0.9);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 15px;
+            box-sizing: border-box;
+            z-index: 1000;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            border-radius: 0 0 16px 16px;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, #1db954, #8000ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        .now-playing-container {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .now-playing-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-stats {
+            font-size: 11px;
+            color: var(--text-sub);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .now-playing-fav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 7px;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+        .now-playing-fav-btn {
+            border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,.07);
+            color: var(--text-sub);
+            border-radius: 18px;
+            padding: 5px 11px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: .2s ease;
+        }
+        .now-playing-fav-btn:hover { transform: scale(1.04); background: rgba(255,255,255,.12); }
+        .now-playing-fav-btn.active { color: #ff4757; border-color: rgba(255,71,87,.45); background: rgba(255,71,87,.12); }
+        .floating-search-btn {
+            position: relative;
+        }
+        .search-panel-floating {
+            display: none;
+            position: fixed;
+            top: 245px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(820px, calc(100% - 24px));
+            z-index: 1500;
+            padding: 10px;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            background: rgba(7,12,11,.96);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 15px 45px rgba(0,0,0,.55);
+        }
+        .search-panel-floating.open { display: block; }
+        @media (max-width: 600px) {
+            .search-panel-floating { top: 275px; width: calc(100% - 18px); }
+        }
+
+        .player-controls-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .btn-ctrl {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ctrl:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .btn-ctrl.main-play {
+            background: var(--primary);
+            color: #000;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+
+        .btn-ctrl.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(29, 185, 84, 0.15);
+        }
+
+        audio {
+            width: 100%;
+            height: 32px;
+            border-radius: 8px;
+            filter: invert(100%) hue-rotate(180deg);
+            opacity: 0.8;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            background: var(--card-bg);
+            color: var(--text-sub);
+            border: 1px solid var(--glass-border);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-action:hover {
+            color: var(--text-main);
+            background: var(--card-hover);
+        }
+
+        .btn-action.btn-danger {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--danger);
+            border-color: rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-action.btn-danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            padding: 6px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            color: var(--text-main);
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            font-weight: 600;
+        }
+
+        .song-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .song-item:hover {
+            background: var(--card-hover);
+            transform: translateY(-2px);
+        }
+
+        .song-item.highlight {
+            border-color: var(--primary);
+            background: rgba(29, 185, 84, 0.15);
+        }
+
+        .song-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .song-position {
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 25px;
+            font-size: 13px;
+        }
+
+        .fav-btn, .info-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .fav-btn.active {
+            color: #ff4757;
+        }
+
+        .song-details {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .song-title-text {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stars {
+            color: var(--accent-star);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .play-count {
+            color: var(--text-sub);
+            font-size: 12px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .stat-badge {
+            display: block;
+        }
+
+        .stat-badge.highlight-stat {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* Modal de Estatísticas */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #18132b;
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: var(--primary);
+            word-break: break-word;
+        }
+
+        .modal-body p {
+            margin: 8px 0;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            margin-top: 15px;
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .search-wrap { display:flex; gap:6px; align-items:center; }
+        .search-wrap .search-input { flex:1; }
+        .search-nav, .search-close { min-width:42px; height:44px; border:1px solid var(--glass-border); border-radius:12px; background:rgba(255,255,255,.06); color:#fff; cursor:pointer; font-size:16px; }
+        .search-nav:hover, .search-close:hover { background:rgba(29,185,84,.16); border-color:rgba(29,185,84,.4); }
+        .search-status { min-height:18px; margin:5px 4px 0; color:var(--text-sub); font-size:12px; }
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .stats-card { padding:10px; border:1px solid var(--glass-border); border-radius:10px; background:rgba(255,255,255,.04); }
+        .stats-card strong { display:block; color:var(--primary); font-size:16px; margin-top:3px; }
+        .stats-section { margin-top:14px; }
+        .stats-section h3 { margin:0 0 8px; font-size:14px; color:var(--primary); }
+        .stats-list { margin:0; padding-left:20px; font-size:13px; }
+        .stats-list li { margin:4px 0; }
+        .backup-note { color:var(--text-sub); font-size:12px; margin-top:10px; }
+
+        input[type="file"] { display: none; }
+
+        /* --- Visual refresh: LukokMetron Player --- */
+        body {
+            max-width: 860px;
+            padding: 310px 14px 28px;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(29,185,84,.16), transparent 30%),
+                radial-gradient(circle at 90% 10%, rgba(128,0,255,.14), transparent 28%),
+                linear-gradient(145deg, #070b0a 0%, #0b1110 48%, #09070f 100%);
+        }
+
+        .top-fixed-panel {
+            max-width: 860px;
+            padding: 14px 16px 16px;
+            background: rgba(7, 12, 11, .92);
+            border: 1px solid rgba(255,255,255,.08);
+            border-top: 0;
+            box-shadow: 0 14px 45px rgba(0,0,0,.55);
+        }
+
+        .app-header {
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-title {
+            font-size: clamp(22px, 4vw, 30px);
+            letter-spacing: .5px;
+            text-shadow: 0 0 22px rgba(29,185,84,.18);
+        }
+
+        .actions-bar {
+            justify-content: flex-end;
+            gap: 7px;
+        }
+
+        .btn-action {
+            padding: 8px 11px;
+            border-radius: 11px;
+            font-size: 12px;
+            background: rgba(255,255,255,.055);
+            backdrop-filter: blur(8px);
+        }
+
+        .now-playing-container {
+            padding: 14px 16px;
+            border-radius: 18px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+            background:
+                linear-gradient(135deg, rgba(29,185,84,.12), rgba(255,255,255,.035) 55%, rgba(128,0,255,.06));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+        }
+
+        .now-playing-title {
+            font-size: clamp(15px, 3vw, 19px);
+            font-weight: 750;
+        }
+
+        .now-playing-stats {
+            font-size: 12px;
+            margin-top: 7px;
+            color: #c2c9c5;
+        }
+
+        .player-controls-top {
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .btn-ctrl {
+            min-width: 58px;
+            min-height: 42px;
+            padding: 8px 13px;
+            border-radius: 22px;
+            background: rgba(255,255,255,.07);
+        }
+
+        .btn-ctrl.main-play {
+            min-width: 74px;
+            padding: 11px 20px;
+            box-shadow: 0 7px 24px rgba(29,185,84,.18);
+        }
+
+        audio {
+            height: 34px;
+        }
+
+        .main-content {
+            margin-top: 8px;
+        }
+
+        .search-input {
+            padding: 13px 16px;
+            border-radius: 15px;
+            font-size: 15px;
+            background: rgba(0,0,0,.32);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+        }
+
+        .tabs {
+            gap: 7px;
+            margin: 12px 0 15px;
+            padding: 5px 2px 9px;
+            scrollbar-width: thin;
+        }
+
+        .tab-btn {
+            padding: 8px 13px;
+            font-size: 13px;
+            border: 1px solid transparent;
+            transition: .2s ease;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,.05);
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: rgba(29,185,84,.14);
+            border-color: rgba(29,185,84,.35);
+            box-shadow: 0 4px 16px rgba(29,185,84,.08);
+        }
+
+        .song-item {
+            min-height: 62px;
+            padding: 13px 15px;
+            margin-bottom: 9px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255,255,255,.065), rgba(255,255,255,.035));
+            box-shadow: 0 5px 20px rgba(0,0,0,.12);
+        }
+
+        .song-item:hover {
+            border-color: rgba(29,185,84,.32);
+            transform: translateY(-1px);
+        }
+
+        .song-item.is-playing {
+            border-color: #1db954;
+            background: linear-gradient(135deg, rgba(29,185,84,.20), rgba(29,185,84,.055));
+            box-shadow: 0 0 0 1px rgba(29,185,84,.12), 0 8px 25px rgba(29,185,84,.11);
+        }
+
+        .song-item.is-playing .song-title-text {
+            color: #63f79a;
+            font-weight: 750;
+        }
+
+        .playing-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: #1db954;
+            box-shadow: 0 0 10px rgba(29,185,84,.9);
+            vertical-align: middle;
+        }
+
+        .song-position {
+            min-width: 30px;
+            font-size: 14px;
+        }
+
+        .fav-btn, .info-btn {
+            font-size: 18px;
+            padding: 3px 5px;
+        }
+
+        .song-title-text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .stars {
+            font-size: 12px;
+        }
+
+        .play-count {
+            font-size: 12px;
+            line-height: 1.35;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding-top: 315px;
+                padding-left: 9px;
+                padding-right: 9px;
+            }
+
+            .top-fixed-panel {
+                padding: 11px 10px 12px;
+            }
+
+            .app-header {
+                align-items: flex-start;
+            }
+
+            .app-title {
+                margin-top: 9px;
+                font-size: 22px;
+            }
+
+            .actions-bar {
+                max-width: 64%;
+            }
+
+            .btn-action {
+                font-size: 11px;
+                padding: 7px 8px;
+            }
+
+            .player-controls-top {
+                gap: 7px;
+            }
+
+            .btn-ctrl {
+                min-width: 50px;
+                min-height: 40px;
+                padding: 7px 9px;
+            }
+
+            .btn-ctrl.main-play {
+                min-width: 67px;
+            }
+
+            .song-item {
+                padding: 12px 10px;
+                border-radius: 14px;
+            }
+
+            .song-info {
+                gap: 7px;
+            }
+
+            .song-title-text {
+                font-size: 14px;
+            }
+
+            .play-count {
+                font-size: 11px;
+            }
+
+            .tabs {
+                margin-left: -2px;
+                margin-right: -2px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-fixed-panel">
+        <div class="app-header">
+            <h1 class="app-title">LukokMetron</h1>
+            <div class="actions-bar">
+                <button class="btn-action" onclick="loadFolder()">📁 Importar Pasta</button>
+                <button class="btn-action" onclick="openStatsModal()">📊 Estatísticas</button>
+                <button class="btn-action" onclick="exportFullBackup()">💾 Backup completo</button>
+                <button class="btn-action" onclick="document.getElementById('backup-file').click()">♻️ Restaurar backup</button>
+                <!-- BOTÃO ADICIONADO ABAIXO -->
+                <button class="btn-action btn-danger" onclick="clearAllData()">🗑️ Limpar Tudo</button>
+            </div>
+        </div>
+
+        <div class="now-playing-container">
+            <div id="current-title" class="now-playing-title">Nenhuma música selecionada</div>
+            <div id="current-stats" class="now-playing-stats">---</div>
+            <div class="now-playing-fav">
+                <span id="current-fav-status">♡ Não está nos favoritos</span>
+                <button id="current-fav-btn" class="now-playing-fav-btn" onclick="toggleCurrentFavorite(event)" title="Adicionar/remover dos favoritos">♡ Favorito</button>
+            </div>
+        </div>
+
+        <div class="player-controls-top">
+            <button class="btn-ctrl" onclick="playPrev()" title="Anterior">⏮️</button>
+            <button id="btn-main-play" class="btn-ctrl main-play" onclick="togglePlayPause()" title="Play/Pause">▶️</button>
+            <button class="btn-ctrl" onclick="playNext()" title="Próxima">⏭️</button>
+            <button class="btn-ctrl floating-search-btn" onclick="toggleFloatingSearch()" title="Pesquisar música">🔍</button>
+            <button id="btn-shuffle" class="btn-ctrl" onclick="toggleShuffle()" title="Aleatório">🔀</button>
+            <button id="btn-repeat" class="btn-ctrl" onclick="toggleRepeat()" title="Repetição">🔁</button>
+        </div>
+
+        <audio id="audio-player" controls></audio>
+    </div>
+
+    <div class="main-content">
+        <div id="floating-search-panel" class="search-panel-floating">
+            <div class="search-wrap"><input type="text" id="search-input" class="search-input" placeholder="🔍 Pesquisar por título..." oninput="searchAndScroll()" onkeydown="handleSearchKey(event)"><button class="search-nav" onclick="searchPrevious()" title="Resultado anterior">⬆️</button><button class="search-nav" onclick="searchNext()" title="Próximo resultado">⬇️</button><button class="search-close" onclick="closeSearch()" title="Fechar pesquisa">✕</button></div><div id="search-status" class="search-status"></div>
+            </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('all', event)">Geral</button>
+            <button class="tab-btn" onclick="switchTab('recent', event)">🆕 Recentes</button>
+            <button class="tab-btn" onclick="switchTab('week', event)">Top 20 Semana</button>
+            <button class="tab-btn" onclick="switchTab('twodays', event)">🔥 Top 20 — 2 dias</button>
+            <button class="tab-btn" onclick="switchTab('month', event)">Top Mês</button>
+            <button id="favorites-tab" class="tab-btn" onclick="switchTab('favs', event)">❤️ Favoritas (0)</button>
+            <button class="tab-btn" onclick="switchTab('least', event)">⬇️ Menos tocadas</button>
+            <button class="tab-btn" onclick="switchTab('notweek', event)">🕒 Não tocadas nesta semana</button>
+            <button class="tab-btn" onclick="switchTab('stars3', event)">⭐ +3 estrelas</button>
+            <button class="tab-btn" onclick="switchTab('stars5', event)">🌟 +5 estrelas</button>
+            <button class="tab-btn" onclick="switchTab('stars10', event)">🏆 +10 estrelas</button>
+        </div>
+
+        <ul id="song-list" class="song-list"></ul>
+    </div>
+
+    <!-- Modal Estatísticas Gerais -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content stats-modal-content">
+            <div class="modal-header">📊 Estatísticas Gerais</div>
+            <div id="stats-modal-body" class="modal-body"></div>
+            <button class="modal-close" onclick="closeStatsModal()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+            <div id="modal-title" class="modal-header"></div>
+            <div id="modal-body" class="modal-body"></div>
+            <button class="modal-close" onclick="closeModal()">Fechar</button>
+        </div>
+    </div>
+
+    <input type="file" id="backup-file" accept=".json" onchange="importFullBackup(event)">
+    <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handleFolderSelect(event)">
+
+    <script>
+        let songs = [];
+        let stats = JSON.parse(localStorage.getItem('player_stats')) || {};
+        let currentTab = 'all';
+        let currentSong = null;
+        let countedCurrentPlay = false;
+
+        let isShuffle = false;
+        let repeatMode = 'off';
+        let searchResults = [];
+        let searchIndex = -1;
+
+        const audioPlayer = document.getElementById('audio-player');
+        const songListElement = document.getElementById('song-list');
+        const currentTitleElement = document.getElementById('current-title');
+        const currentStatsElement = document.getElementById('current-stats');
+        const btnMainPlay = document.getElementById('btn-main-play');
+        const currentFavBtn = document.getElementById('current-fav-btn');
+        const currentFavStatus = document.getElementById('current-fav-status');
+
+        // --- Configuração IndexedDB para persistência física dos ficheiros ---
+        let db;
+        const dbRequest = indexedDB.open("LukokMetronAudioDB", 1);
+        dbRequest.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains("audioFiles")) {
+                db.createObjectStore("audioFiles", { keyPath: "id" });
+            }
+        };
+        dbRequest.onsuccess = (e) => {
+            db = e.target.result;
+            loadStoredSongs();
+        };
+
+        function saveSongToDB(id, title, fileBlob, addedAt) {
+            if (!db) return;
+            const tx = db.transaction("audioFiles", "readwrite");
+            const store = tx.objectStore("audioFiles");
+            store.put({ id, title, fileBlob, addedAt: addedAt || Date.now() });
+        }
+
+        function loadStoredSongs() {
+            if (!db) return;
+            const tx = db.transaction("audioFiles", "readonly");
+            const store = tx.objectStore("audioFiles");
+            const req = store.getAll();
+            req.onsuccess = () => {
+                const records = req.result;
+                if (records && records.length > 0) {
+                    songs = records.map(r => {
+                        if (!stats[r.id]) {
+                            stats[r.id] = { plays: 0, isFavorite: false, starsManual: 0, history: [] };
+                        }
+                        const addedAt = r.addedAt || stats[r.id]?.addedAt || r.fileBlob?.lastModified || 0;
+                        if (!stats[r.id].addedAt && addedAt) stats[r.id].addedAt = addedAt;
+                        return {
+                            id: r.id,
+                            title: r.title,
+                            url: URL.createObjectURL(r.fileBlob),
+                            addedAt
+                        };
+                    });
+                    saveStats();
+                    renderSongs();
+                    restoreLastPlayback();
+                }
+            };
+        }
+
+        // --- FUNÇÃO PARA LIMPAR TUDO (Estatísticas + Pasta) ---
+        function clearAllData() {
+            const confirmed = confirm("Tem a certeza que deseja apagar todas as estatísticas e remover a pasta guardada?\n\nEsta ação obrigará a selecionar a pasta novamente.");
+            if (!confirmed) return;
+
+            // 1. Apaga estatísticas e estados do LocalStorage
+            localStorage.removeItem('player_stats');
+            localStorage.removeItem('player_last_playback');
+
+            // 2. Apaga o banco de dados de músicas (IndexedDB)
+            if (db) {
+                db.close();
+            }
+            const deleteDBRequest = indexedDB.deleteDatabase("LukokMetronAudioDB");
+
+            deleteDBRequest.onsuccess = () => {
+                alert("Todos os dados e a pasta selecionada foram removidos com sucesso!");
+                location.reload(); // Recarrega a página
+            };
+
+            deleteDBRequest.onerror = () => {
+                // Caso falhe ao apagar a BD diretamente, limpa manualmente
+                alert("Dados limpos! A página será reiniciada.");
+                location.reload();
+            };
+        }
+
+        function loadFolder() {
+            if (window.AndroidLukok && AndroidLukok.isNativePlayer && AndroidLukok.isNativePlayer()) { AndroidLukok.pickFolder(); return; }
+            document.getElementById('folder-input').click();
+        }
+
+        function onNativeSongs(jsonText) {
+            try {
+                const nativeSongs = JSON.parse(jsonText || "[]");
+                songs = nativeSongs.map(x => ({ id:x.id, title:x.title, url:x.uri, addedAt:Date.now() }));
+                songs.forEach(s => { if(!stats[s.id]) stats[s.id]={plays:0,isFavorite:false,starsManual:0,history:[],addedAt:s.addedAt}; });
+                saveStats(); renderSongs(); restoreLastPlayback();
+            } catch(e) { console.error(e); }
+        }
+
+        function handleFolderSelect(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (file.type.includes('audio') || /\.(mp3|m4a|aac|wav|flac|ogg|opus)$/i.test(file.name)) {
+                    const id = file.name;
+                    if (!stats[id]) {
+                        stats[id] = { plays: 0, isFavorite: false, starsManual: 0, history: [], addedAt: Date.now() };
+                    } else if (!stats[id].addedAt) {
+                        stats[id].addedAt = file.lastModified || Date.now();
+                    }
+                    saveSongToDB(
+                        id,
+                        file.name.replace(/\.[^/.]+$/, ""),
+                        file,
+                        stats[id].addedAt
+                    );
+                }
+            });
+            saveStats();
+            setTimeout(() => {
+                loadStoredSongs();
+            }, 500);
+        }
+
+        function saveStats() {
+            localStorage.setItem('player_stats', JSON.stringify(stats));
+        }
+
+        function saveCurrentPlaybackState() {
+            if (currentSong) {
+                const state = {
+                    songId: currentSong.id,
+                    time: audioPlayer.currentTime,
+                    playing: !audioPlayer.paused
+                };
+                localStorage.setItem('player_last_playback', JSON.stringify(state));
+            }
+        }
+
+        function restoreLastPlayback() {
+            const savedState = JSON.parse(localStorage.getItem('player_last_playback'));
+            if (savedState && savedState.songId) {
+                const song = songs.find(s => s.id === savedState.songId);
+                if (song) {
+                    playSong(song.id, false);
+                    audioPlayer.currentTime = savedState.time || 0;
+                    if (savedState.playing) {
+                        audioPlayer.play().catch(() => {});
+                        btnMainPlay.textContent = '⏸️';
+                    }
+                }
+            }
+        }
+audioPlayer.addEventListener('timeupdate', () => {
+            saveCurrentPlaybackState();
+
+            if (currentSong && !countedCurrentPlay && audioPlayer.duration > 0) {
+                const percentagePlayed = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                if (percentagePlayed >= 10) {
+                    const id = currentSong.id;
+                    stats[id].plays = (stats[id].plays || 0) + 1;
+                    if (!stats[id].history) stats[id].history = [];
+                    stats[id].history.push(Date.now());
+
+                    countedCurrentPlay = true;
+                    saveStats();
+                    renderSongs();
+                    updateNowPlayingHeader();
+                }
+            }
+        });
+
+        function getPlaysInPeriod(songId, timeFrameMs) {
+            const data = stats[songId];
+            if (!data || !data.history) return 0;
+            const now = Date.now();
+            return data.history.filter(t => (now - t) <= timeFrameMs).length;
+        }
+
+        function getStartOfWeek(date = new Date()) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            const day = d.getDay(); // Domingo = 0 ... Sábado = 6
+            d.setDate(d.getDate() - day);
+            return d.getTime();
+        }
+
+        function getStartOfNextWeek(date = new Date()) {
+            const start = new Date(getStartOfWeek(date));
+            start.setDate(start.getDate() + 7);
+            return start.getTime();
+        }
+
+        function getStartOfMonth(date = new Date()) {
+            const d = new Date(date.getFullYear(), date.getMonth(), 1);
+            return d.getTime();
+        }
+
+        function getStartOfNextMonth(date = new Date()) {
+            const d = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+            return d.getTime();
+        }
+
+        function getWeeklyPlays(songId) {
+            const start = getStartOfWeek();
+            const end = getStartOfNextWeek();
+            const data = stats[songId];
+            return data && data.history ? data.history.filter(t => t >= start && t < end).length : 0;
+        }
+
+        function getMonthlyPlays(songId) {
+            const start = getStartOfMonth();
+            const end = getStartOfNextMonth();
+            const data = stats[songId];
+            return data && data.history ? data.history.filter(t => t >= start && t < end).length : 0;
+        }
+
+        function getTwoCalendarDaysPlays(songId) {
+            const now = new Date();
+            const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const startYesterday = startToday - 24 * 60 * 60 * 1000;
+            const data = stats[songId];
+            return data && data.history ? data.history.filter(t => t >= startYesterday && t < Date.now()).length : 0;
+        }
+
+        // ================================================================
+        // ESTRELAS AUTOMÁTICAS
+        // 1 estrela a cada 5 reproduções dentro da mesma semana
+        // (Domingo → Sábado).
+        // 1 estrela é retirada por cada semana COMPLETA sem reprodução.
+        // A estrela nunca pode ser alterada manualmente pelo utilizador.
+        // A semana atual ainda não conta como "sem reprodução" enquanto
+        // estiver em andamento.
+        // ================================================================
+        function getWeekKeyFromTimestamp(timestamp) {
+            const d = new Date(timestamp);
+            const start = new Date(getStartOfWeek(d));
+            return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+        }
+
+        function getWeeklyHistory(songId) {
+            const data = stats[songId];
+            if (!data || !Array.isArray(data.history) || data.history.length === 0) return new Map();
+
+            const weeks = new Map();
+            data.history.forEach(t => {
+                const key = getWeekKeyFromTimestamp(t);
+                weeks.set(key, (weeks.get(key) || 0) + 1);
+            });
+            return weeks;
+        }
+
+        function calculateStars(songId) {
+            const data = stats[songId];
+            if (!data || !Array.isArray(data.history) || data.history.length === 0) return 0;
+
+            const weeks = getWeeklyHistory(songId);
+            const firstPlay = Math.min(...data.history);
+            const firstWeek = new Date(getStartOfWeek(new Date(firstPlay)));
+            const currentWeek = new Date(getStartOfWeek(new Date()));
+
+            let stars = 0;
+            const cursor = new Date(firstWeek);
+
+            // Percorre semana por semana desde a primeira reprodução.
+            // A semana atual é calculada pelas reproduções, mas nunca sofre
+            // a penalização de "sem reprodução", pois ainda não terminou.
+            while (cursor <= currentWeek) {
+                const key = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
+                const plays = weeks.get(key) || 0;
+
+                if (plays > 0) {
+                    stars += Math.floor(plays / 5);
+                } else if (cursor.getTime() < currentWeek.getTime()) {
+                    stars = Math.max(0, stars - 1);
+                }
+
+                cursor.setDate(cursor.getDate() + 7);
+            }
+
+            return Math.max(0, stars);
+        }
+
+        function switchTab(tab, event) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderSongs();
+        }
+
+        function updateFavoriteTabCount() {
+            const el = document.getElementById('favorites-tab');
+            if (el) el.textContent = `❤️ Favoritas (${countFavorites()})`;
+        }
+
+        function toggleFavorite(id, event) {
+            event.stopPropagation();
+            if (stats[id]) {
+                stats[id].isFavorite = !stats[id].isFavorite;
+                saveStats();
+                renderSongs();
+                updateFavoriteTabCount();
+            }
+        }
+
+        function toggleShuffle() {
+            isShuffle = !isShuffle;
+            document.getElementById('btn-shuffle').classList.toggle('active', isShuffle);
+        }
+
+        function toggleRepeat() {
+            const btn = document.getElementById('btn-repeat');
+            if (repeatMode === 'off') {
+                repeatMode = 'one';
+                btn.textContent = '🔂';
+                btn.classList.add('active');
+            } else if (repeatMode === 'one') {
+                repeatMode = 'all';
+                btn.textContent = '🔁';
+                btn.classList.add('active');
+            } else {
+                repeatMode = 'off';
+                btn.textContent = '🔁';
+                btn.classList.remove('active');
+            }
+        }
+
+        function updateMediaSession() {
+            if (!('mediaSession' in navigator) || !currentSong) return;
+
+            try {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: currentSong.title || 'Sem título',
+                    artist: currentSong.artist || 'LukokMetron',
+                    album: currentSong.album || 'LukokMetron Player',
+                    artwork: currentSong.artwork ? [{ src: currentSong.artwork }] : []
+                });
+                navigator.mediaSession.playbackState = audioPlayer.paused ? 'paused' : 'playing';
+            } catch (e) {}
+        }
+
+        function setupMediaSession() {
+            if (!('mediaSession' in navigator) || !navigator.mediaSession.setActionHandler) return;
+
+            const actions = {
+                play: () => {
+                    audioPlayer.play().then(() => {
+                        btnMainPlay.textContent = '⏸️';
+                        updateMediaSession();
+                    }).catch(() => {});
+                },
+                pause: () => {
+                    audioPlayer.pause();
+                    btnMainPlay.textContent = '▶️';
+                    updateMediaSession();
+                },
+                nexttrack: () => {
+                    playNext();
+                },
+                previoustrack: () => {
+                    playPrev();
+                },
+                seekbackward: (details) => {
+                    audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - (details.seekOffset || 10));
+                },
+                seekforward: (details) => {
+                    audioPlayer.currentTime = Math.min(audioPlayer.duration || Infinity, audioPlayer.currentTime + (details.seekOffset || 10));
+                }
+            };
+
+            Object.entries(actions).forEach(([action, handler]) => {
+                try {
+                    navigator.mediaSession.setActionHandler(action, handler);
+                } catch (e) {}
+            });
+        }
+
+        function playSong(id, autoStart = true) {
+            const song = songs.find(s => s.id === id);
+            if (!song) return;
+
+            currentSong = song;
+            countedCurrentPlay = false;
+            audioPlayer.src = song.url;
+            
+            updateNowPlayingHeader();
+            updateMediaSession();
+
+            if (autoStart) {
+                audioPlayer.play().then(() => {
+                    btnMainPlay.textContent = '⏸️';
+                    updateMediaSession();
+                }).catch(() => {
+                    btnMainPlay.textContent = '▶️';
+                });
+            }
+        }
+
+        function updateNowPlayingHeader() {
+            if (!currentSong) {
+                currentFavStatus.textContent = '♡ Não está nos favoritos';
+                currentFavBtn.classList.remove('active');
+                currentFavBtn.textContent = '♡ Favorito';
+                return;
+            }
+
+            const displayed = getDisplayedSongs();
+            const posIndex = displayed.findIndex(s => s.id === currentSong.id);
+            const posStr = posIndex !== -1 ? `#${posIndex + 1}` : 'N/A';
+            currentTitleElement.textContent = currentSong.title;
+
+            const songData = stats[currentSong.id] || { plays: 0, isFavorite: false };
+            const wPlays = getWeeklyPlays(currentSong.id);
+            const mPlays = getMonthlyPlays(currentSong.id);
+            if (currentTab === 'all') {
+                currentStatsElement.textContent = `Posição: ${posStr} | Total Execuções: ${songData.plays}`;
+            } else {
+                currentStatsElement.textContent = `Posição: ${posStr} | Geral: ${songData.plays} | Semana: ${wPlays} | Mês: ${mPlays}`;
+            }
+
+            const isFav = !!songData.isFavorite;
+            currentFavStatus.textContent = isFav ? '♥ Está nos favoritos' : '♡ Não está nos favoritos';
+            currentFavBtn.textContent = isFav ? '♥ Remover dos favoritos' : '♡ Adicionar aos favoritos';
+            currentFavBtn.classList.toggle('active', isFav);
+        }
+
+        function toggleCurrentFavorite(event) {
+            if (event) event.stopPropagation();
+            if (!currentSong || !stats[currentSong.id]) return;
+            stats[currentSong.id].isFavorite = !stats[currentSong.id].isFavorite;
+            saveStats();
+            updateNowPlayingHeader();
+            renderSongs();
+            updateFavoriteTabCount();
+        }
+
+        function toggleFloatingSearch() {
+            const panel = document.getElementById('floating-search-panel');
+            const input = document.getElementById('search-input');
+            const opening = !panel.classList.contains('open');
+            panel.classList.toggle('open', opening);
+            if (opening) {
+                input.focus();
+                input.select();
+            } else {
+                closeSearch();
+            }
+        }
+
+        function togglePlayPause() {
+            if (!currentSong && songs.length > 0) {
+                playSong(getDisplayedSongs()[0].id);
+                return;
+            }
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                btnMainPlay.textContent = '⏸️';
+            } else {
+                audioPlayer.pause();
+                btnMainPlay.textContent = '▶️';
+            }
+        }
+
+        function playNext() {
+            const visibleSongs = getDisplayedSongs();
+            if (visibleSongs.length === 0) return;
+
+            let nextIndex = 0;
+            if (currentSong) {
+                const currentIndex = visibleSongs.findIndex(s => s.id === currentSong.id);
+                if (isShuffle) {
+                    nextIndex = Math.floor(Math.random() * visibleSongs.length);
+                } else {
+                    nextIndex = (currentIndex + 1) % visibleSongs.length;
+                }
+            }
+            playSong(visibleSongs[nextIndex].id);
+        }
+
+        function playPrev() {
+            const visibleSongs = getDisplayedSongs();
+            if (visibleSongs.length === 0) return;
+
+            let prevIndex = 0;
+            if (currentSong) {
+                const currentIndex = visibleSongs.findIndex(s => s.id === currentSong.id);
+                if (isShuffle) {
+                    prevIndex = Math.floor(Math.random() * visibleSongs.length);
+                } else {
+                    prevIndex = (currentIndex - 1 + visibleSongs.length) % visibleSongs.length;
+                }
+            }
+            playSong(visibleSongs[prevIndex].id);
+        }
+
+        audioPlayer.addEventListener('play', () => {
+            btnMainPlay.textContent = '⏸️';
+            if ('mediaSession' in navigator) {
+                try { navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
+            }
+        });
+
+        audioPlayer.addEventListener('pause', () => {
+            btnMainPlay.textContent = '▶️';
+            if ('mediaSession' in navigator) {
+                try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
+            }
+        });
+
+        audioPlayer.addEventListener('ended', () => {
+            if (repeatMode === 'one' && currentSong) {
+                playSong(currentSong.id, true);
+            } else {
+                playNext();
+            }
+        });
+
+        setupMediaSession();
+
+        function getSongAddedAt(song) {
+            return song.addedAt || stats[song.id]?.addedAt || 0;
+        }
+
+        function getDisplayedSongs() {
+            let filtered = [...songs];
+            const now = Date.now();
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+            if (currentTab === 'recent') {
+                filtered = filtered.filter(s => {
+                    const addedAt = getSongAddedAt(s);
+                    return addedAt > 0 && (now - addedAt) <= sevenDays;
+                });
+                filtered.sort((a, b) => getSongAddedAt(b) - getSongAddedAt(a));
+
+            } else if (currentTab === 'favs') {
+                filtered = filtered.filter(s => stats[s.id] && stats[s.id].isFavorite);
+                filtered.sort((a, b) => (stats[b.id]?.plays || 0) - (stats[a.id]?.plays || 0));
+
+            } else if (currentTab === 'week') {
+                filtered = filtered.filter(s => getWeeklyPlays(s.id) > 0);
+                filtered.sort((a, b) => getWeeklyPlays(b.id) - getWeeklyPlays(a.id));
+                filtered = filtered.slice(0, 20);
+
+            } else if (currentTab === 'twodays') {
+                filtered = filtered.filter(s => getTwoCalendarDaysPlays(s.id) > 0);
+                filtered.sort((a, b) => getTwoCalendarDaysPlays(b.id) - getTwoCalendarDaysPlays(a.id));
+                filtered = filtered.slice(0, 20);
+
+            } else if (currentTab === 'month') {
+                filtered = filtered.filter(s => getMonthlyPlays(s.id) > 0);
+                filtered.sort((a, b) => getMonthlyPlays(b.id) - getMonthlyPlays(a.id));
+
+            } else if (currentTab === 'least') {
+                filtered.sort((a, b) => {
+                    const diff = (stats[a.id]?.plays || 0) - (stats[b.id]?.plays || 0);
+                    return diff || a.title.localeCompare(b.title, 'pt');
+                });
+                filtered = filtered.slice(0, 50);
+
+            } else if (currentTab === 'notweek') {
+                filtered = filtered.filter(s => getWeeklyPlays(s.id) === 0);
+                filtered.sort((a, b) => (stats[a.id]?.plays || 0) - (stats[b.id]?.plays || 0));
+
+            } else if (currentTab === 'stars3') {
+                filtered = filtered.filter(s => calculateStars(s.id) > 3);
+                filtered.sort((a, b) => calculateStars(b.id) - calculateStars(a.id));
+
+            } else if (currentTab === 'stars5') {
+                filtered = filtered.filter(s => calculateStars(s.id) > 5);
+                filtered.sort((a, b) => calculateStars(b.id) - calculateStars(a.id));
+
+            } else if (currentTab === 'stars10') {
+                filtered = filtered.filter(s => calculateStars(s.id) > 10);
+                filtered.sort((a, b) => calculateStars(b.id) - calculateStars(a.id));
+
+            } else {
+                filtered.sort((a, b) => (stats[b.id]?.plays || 0) - (stats[a.id]?.plays || 0));
+            }
+
+            return filtered;
+        }
+
+        function updateSearchResults() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            if (!query) { searchResults = []; searchIndex = -1; document.getElementById('search-status').textContent = ''; return; }
+            const displayed = getDisplayedSongs();
+            searchResults = displayed.map((song, i) => ({song, i})).filter(x => x.song.title.toLowerCase().includes(query));
+            if (searchIndex >= searchResults.length) searchIndex = 0;
+            if (searchIndex < 0 && searchResults.length) searchIndex = 0;
+        }
+
+        function showSearchResult() {
+            const status = document.getElementById('search-status');
+            document.querySelectorAll('.song-item').forEach(el => el.classList.remove('highlight'));
+            if (!searchResults.length) { status.textContent = 'Nenhuma música encontrada'; return; }
+            const item = searchResults[searchIndex];
+            const element = document.getElementById(`song-item-${item.i}`);
+            if (element) { element.scrollIntoView({behavior:'smooth', block:'center'}); element.classList.add('highlight'); }
+            status.textContent = `${searchIndex + 1} de ${searchResults.length} resultados`;
+        }
+
+        function searchAndScroll() { updateSearchResults(); showSearchResult(); }
+        function searchNext() { if (!searchResults.length) updateSearchResults(); if (!searchResults.length) return; searchIndex = (searchIndex + 1) % searchResults.length; showSearchResult(); }
+        function searchPrevious() { if (!searchResults.length) updateSearchResults(); if (!searchResults.length) return; searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length; showSearchResult(); }
+        function handleSearchKey(event) {
+            if (event.key === 'Enter') { event.preventDefault(); event.shiftKey ? searchPrevious() : searchNext(); }
+            if (event.key === 'Escape') closeSearch();
+        }
+        function closeSearch() { document.getElementById('search-input').value=''; searchResults=[]; searchIndex=-1; document.getElementById('search-status').textContent=''; document.querySelectorAll('.song-item').forEach(el=>el.classList.remove('highlight')); document.getElementById('search-input').blur(); document.getElementById('floating-search-panel').classList.remove('open'); }
+
+function openDetailsModal(songId, event) {
+            event.stopPropagation();
+            const song = songs.find(s => s.id === songId);
+            if (!song) return;
+
+            const songData = stats[songId] || { plays: 0 };
+            const wPlays = getWeeklyPlays(songId);
+            const mPlays = getMonthlyPlays(songId);
+
+            document.getElementById('modal-title').textContent = song.title;
+            document.getElementById('modal-body').innerHTML = `
+                <p>📊 <strong>Total Geral:</strong> ${songData.plays} reproduções</p>
+                <p>📅 <strong>Semana atual (Domingo–Sábado):</strong> ${wPlays} reproduções</p>
+                <p>🗓️ <strong>Mês atual (dia 1–último dia):</strong> ${mPlays} reproduções</p>
+            `;
+            document.getElementById('info-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('info-modal').style.display = 'none';
+        }
+
+        function renderSongs() {
+            updateFavoriteTabCount();
+            songListElement.innerHTML = '';
+            const filteredSongs = getDisplayedSongs();
+
+            filteredSongs.forEach((song, index) => {
+                const songData = stats[song.id] || { plays: 0, isFavorite: false };
+                const stars = calculateStars(song.id);
+                const starDisplay = '★'.repeat(stars);
+                const wPlays = getWeeklyPlays(song.id);
+                const mPlays = getMonthlyPlays(song.id);
+
+                const li = document.createElement('li');
+                li.className = 'song-item' + (currentSong && currentSong.id === song.id ? ' is-playing' : '');
+                li.id = `song-item-${index}`;
+                li.onclick = () => playSong(song.id);
+
+                let statsHTML = '';
+                if (currentTab === 'all') {
+                    statsHTML = `<div class="stat-badge">Geral: ${songData.plays}</div>`;
+                } else if (currentTab === 'week') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">Semana: ${wPlays}</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else if (currentTab === 'twodays') {
+                    const twoDaysPlays = getTwoCalendarDaysPlays(song.id);
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">🔥 Ontem + Hoje: ${twoDaysPlays}</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else if (currentTab === 'month') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">Mês: ${mPlays}</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else if (currentTab === 'recent') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">🆕 Recente</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else if (currentTab === 'least') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">Geral: ${songData.plays}</div>
+                        <div>Semana: ${wPlays}</div>
+                    `;
+                } else if (currentTab === 'notweek') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">Semana: 0</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else if (currentTab === 'stars3' || currentTab === 'stars5' || currentTab === 'stars10') {
+                    statsHTML = `
+                        <div class="stat-badge highlight-stat">⭐ ${stars}</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                } else {
+                    statsHTML = `
+                        <div>Semana: ${wPlays} | Mês: ${mPlays}</div>
+                        <div>Geral: ${songData.plays}</div>
+                    `;
+                }
+
+                li.innerHTML = `
+                    <div class="song-info">
+                        <span class="song-position">#${index + 1}</span>
+                        <button class="fav-btn ${songData.isFavorite ? 'active' : ''}" onclick="toggleFavorite('${song.id}', event)" title="Favorito">
+                            ♥
+                        </button>
+                        <button class="info-btn" onclick="openDetailsModal('${song.id}', event)" title="Ver Detalhes">
+                            ℹ️
+                        </button>
+                        <div class="song-details">
+                            <span class="song-title-text">${currentSong && currentSong.id === song.id ? '<span class="playing-dot"></span>' : ''}${song.title}</span>
+                            <span class="stars" title="Estrelas automáticas: +1 a cada 5 reproduções na mesma semana; -1 por cada semana completa sem reprodução">${starDisplay || '☆'}</span>
+                        </div>
+                    </div>
+                    <div class="play-count">
+                        ${statsHTML}
+                    </div>
+                `;
+
+                songListElement.appendChild(li);
+            });
+        }
+
+        function countFavorites() { return songs.filter(s => stats[s.id]?.isFavorite).length; }
+        function periodCount(ms) { const now=Date.now(); return Object.values(stats).reduce((sum,d)=>sum+(d.history||[]).filter(t=>now-t<=ms).length,0); }
+        function currentWeekCount() {
+            const start = getStartOfWeek();
+            const end = getStartOfNextWeek();
+            return Object.values(stats).reduce((sum,d) =>
+                sum + (d.history || []).filter(t => t >= start && t < end).length, 0);
+        }
+
+        function currentMonthCount() {
+            const start = getStartOfMonth();
+            const end = getStartOfNextMonth();
+            return Object.values(stats).reduce((sum,d) =>
+                sum + (d.history || []).filter(t => t >= start && t < end).length, 0);
+        }
+
+function todayCount() {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            return Object.values(stats).reduce((sum,d) =>
+                sum + (d.history || []).filter(t => t >= startOfToday && t <= Date.now()).length, 0
+            );
+        }
+        function calendarDayKey(t) { const d=new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        function calendarMonthKey(t) { const d=new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+        function labelMonth(key) { const [y,m]=key.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString('pt-PT',{month:'long',year:'numeric'}); }
+        function getRankings(days, offsetDays=0) {
+            const end=Date.now()-offsetDays*86400000, start=end-days*86400000;
+            return songs.map(s=>({song:s,plays:(stats[s.id]?.history||[]).filter(t=>t>=start&&t<end).length})).filter(x=>x.plays>0).sort((a,b)=>b.plays-a.plays);
+        }
+        function getGrowthRanking(days) {
+            const current=getRankings(days,0), previous=getRankings(days,days);
+            const prevPos=new Map(previous.map((x,i)=>[x.song.id,i+1]));
+            return current.map((x,i)=>({song:x.song,plays:x.plays,position:i+1,previous:prevPos.get(x.song.id)||null,growth:prevPos.has(x.song.id)?prevPos.get(x.song.id)-(i+1):0})).filter(x=>x.growth>0).sort((a,b)=>b.growth-a.growth);
+        }
+        function getBestCalendarPeriod(unit) {
+            const map={}; Object.values(stats).forEach(d=>(d.history||[]).forEach(t=>{const k=unit==='month'?calendarMonthKey(t):calendarDayKey(t);map[k]=(map[k]||0)+1;}));
+            const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]); return entries[0]||null;
+        }
+        function getCalendarPeriodBounds(unit, offset = 0) {
+            const d = new Date();
+            if (unit === 'week') {
+                const start = new Date(getStartOfWeek(d));
+                start.setDate(start.getDate() + offset * 7);
+                const end = new Date(start);
+                end.setDate(end.getDate() + 7);
+                return [start.getTime(), end.getTime()];
+            }
+            const start = new Date(d.getFullYear(), d.getMonth() + offset, 1);
+            const end = new Date(d.getFullYear(), d.getMonth() + offset + 1, 1);
+            return [start.getTime(), end.getTime()];
+        }
+
+        function getCalendarRanking(unit, offset = 0) {
+            const [start, end] = getCalendarPeriodBounds(unit, offset);
+            return songs.map(song => ({
+                song,
+                plays: (stats[song.id]?.history || []).filter(t => t >= start && t < end).length
+            })).filter(x => x.plays > 0).sort((a,b) => b.plays - a.plays);
+        }
+
+        function getGrowthCalendarRanking(unit) {
+            const current = getCalendarRanking(unit, 0);
+            const previous = getCalendarRanking(unit, -1);
+            const prevPos = new Map(previous.map((x,i) => [x.song.id, i + 1]));
+            return current.map((x,i) => ({
+                song:x.song, plays:x.plays, position:i+1,
+                previous:prevPos.get(x.song.id)||null,
+                growth:prevPos.has(x.song.id) ? prevPos.get(x.song.id)-(i+1) : 0
+            })).filter(x => x.growth > 0).sort((a,b) => b.growth-a.growth);
+        }
+
+        function openStatsModal() {
+            const total=Object.values(stats).reduce((s,d)=>s+(d.plays||0),0);
+            const week=currentWeekCount(), month=currentMonthCount(), day=todayCount();
+            const bestMonth=getBestCalendarPeriod('month'), bestDay=getBestCalendarPeriod('day');
+            const growthWeek=getGrowthCalendarRanking('week'), growthMonth=getGrowthCalendarRanking('month');
+            const topWeek=growthWeek[0], topMonth=growthMonth[0];
+            const fav=countFavorites();
+            document.getElementById('stats-modal-body').innerHTML=`
+              <div class="stats-grid">
+                <div class="stats-card">Reprodução geral<strong>${total}</strong></div><div class="stats-card">Semana atual<strong>${week}</strong></div>
+                <div class="stats-card">Mês atual<strong>${month}</strong></div><div class="stats-card">Hoje<strong>${day}</strong></div>
+                <div class="stats-card">Total de músicas<strong>${songs.length}</strong></div><div class="stats-card">❤️ Favoritos<strong>${fav}</strong></div>
+              </div>
+              <div class="stats-section"><h3>Períodos recordistas</h3><p>📅 Mês com maior reprodução: <strong>${bestMonth?labelMonth(bestMonth[0]):'Sem dados'} — ${bestMonth?bestMonth[1]:0}</strong></p><p>🗓️ Dia com mais reproduções: <strong>${bestDay?new Date(bestDay[0]+'T00:00:00').toLocaleDateString('pt-PT'): 'Sem dados'} — ${bestDay?bestDay[1]:0}</strong></p></div>
+              <div class="stats-section"><h3>📈 Maior crescimento de posição</h3><p>Semana atual: <strong>${topWeek?topWeek.song.title+' (+'+topWeek.growth+' posições)':'Sem dados suficientes'}</strong></p><p>Mês atual: <strong>${topMonth?topMonth.song.title+' (+'+topMonth.growth+' posições)':'Sem dados suficientes'}</strong></p></div>
+              <div class="stats-section"><h3>Top 10 — crescimento na semana atual</h3><ol class="stats-list">${growthWeek.slice(0,10).map(x=>`<li><strong>${x.song.title}</strong> — +${x.growth} posições (${x.previous||'—'} → ${x.position})</li>`).join('')||'<li>Sem dados suficientes para comparar a semana atual com a semana anterior.</li>'}</ol></div>
+              <div class="backup-note">O crescimento compara os últimos 7/30 dias com os 7/30 dias imediatamente anteriores.</div>`;
+            document.getElementById('stats-modal').style.display='flex';
+        }
+        function closeStatsModal(){ document.getElementById('stats-modal').style.display='none'; }
+
+        async function blobToDataURL(blob) { return await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);}); }
+        async function exportFullBackup() {
+            if (!songs.length) { alert('Não há músicas para incluir no backup.'); return; }
+            const audio=[];
+            for (const s of songs) {
+                const data=await new Promise((resolve,reject)=>{const tx=db.transaction('audioFiles','readonly');const req=tx.objectStore('audioFiles').get(s.id);req.onsuccess=()=>resolve(req.result);req.onerror=reject;});
+                if (data?.fileBlob) audio.push({id:s.id,title:data.title,addedAt:data.addedAt,file:await blobToDataURL(data.fileBlob)});
+            }
+            const backup={version:2,type:'LukokMetron Full Backup',createdAt:new Date().toISOString(),stats,playback:localStorage.getItem('player_last_playback'),settings:{currentTab,isShuffle,repeatMode},audio};
+            const blob=new Blob([JSON.stringify(backup)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='lukokmetron_backup_completo.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+            alert(`Backup completo criado com ${audio.length} músicas.`);
+        }
+        function dataURLToBlob(dataURL){const [head,b64]=dataURL.split(',');const mime=(head.match(/:(.*?);/)||[])[1]||'audio/mpeg';const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:mime});}
+        async function importFullBackup(event){
+            const file=event.target.files[0]; if(!file)return;
+            try{const backup=JSON.parse(await file.text()); if(backup.type!=='LukokMetron Full Backup'||!Array.isArray(backup.audio)) throw new Error('Backup inválido');
+              if(!confirm(`Restaurar ${backup.audio.length} músicas e todas as estatísticas? Os dados atuais serão substituídos.`))return;
+              stats=backup.stats||{}; saveStats(); localStorage.removeItem('player_last_playback'); if(backup.playback)localStorage.setItem('player_last_playback',backup.playback);
+              const tx=db.transaction('audioFiles','readwrite'); const store=tx.objectStore('audioFiles'); store.clear();
+              await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=reject;});
+              const tx2=db.transaction('audioFiles','readwrite'); const store2=tx2.objectStore('audioFiles'); backup.audio.forEach(x=>store2.put({id:x.id,title:x.title,fileBlob:dataURLToBlob(x.file),addedAt:x.addedAt||Date.now()}));
+              await new Promise((resolve,reject)=>{tx2.oncomplete=resolve;tx2.onerror=reject;});
+              if(backup.settings){currentTab=backup.settings.currentTab||'all';isShuffle=!!backup.settings.isShuffle;repeatMode=backup.settings.repeatMode||'off';}
+              alert('Backup completo restaurado com sucesso. A página será recarregada.'); location.reload();
+            }catch(e){alert('Erro ao restaurar o backup completo: '+e.message);} finally {event.target.value='';}
+        }
+
+        // Compatibilidade com versões anteriores: o botão antigo passa a usar o backup completo.
+        function exportStats(){ exportFullBackup(); }
+
+    </script>
+</body>
+</html>
